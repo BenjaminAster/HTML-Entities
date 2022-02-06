@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="color-scheme" content="dark light" />
+	<meta name="robots" content="all" />
+	<meta name="theme-color" content="black" />
+	<meta name="description" content="A list of all HTML entities." />
+
+	<base href="./" />
+
+	<link rel="icon" href="./icon.svg" />
+	<link rel="manifest" href="./manifest.webmanifest" />
+	<link rel="apple-touch-icon" href="./icon.png" />
+	<link rel="preload" as="fetch" crossorigin href="./entities.json" />
+
+	<title>HTML entities</title>
+
+	<style>
+		:root {
+			scrollbar-color: #8888 transparent;
+		}
+
+		body {
+			font-family: system-ui;
+			margin: 0;
+			box-sizing: border-box;
+			padding: 5px;
+			overflow-x: hidden;
+			/* background-color: black; */
+		}
+
+		ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+			gap: 5px;
+		}
+
+		li {
+			display: flex;
+			flex-direction: column;
+			text-align: center;
+			align-items: center;
+
+			background-color: #8884;
+			border-radius: .5rem;
+
+			min-block-size: 7rem;
+		}
+
+		li>* {
+			transition: all .2s;
+		}
+
+		li .character {
+			white-space: pre;
+			font-size: 3rem;
+		}
+
+		li:hover .character {
+			font-size: 1rem;
+		}
+
+		li .names {
+			font-size: .8rem;
+			opacity: 80%;
+		}
+
+		li .unicode {
+			font-size: .8rem;
+			opacity: 90%;
+			padding: .1em .2em;
+			background-color: #8888;
+			border-radius: .3rem;
+			width: max-content;
+		}
+
+		li .showOnHover {
+			height: 0;
+			pointer-events: none;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			/* background-color: #333; */
+		}
+
+		li:not(:hover) .showOnHover {
+			opacity: 0%;
+		}
+
+	</style>
+
+	<script type="module">
+		const data = await(await window.fetch("./entities.json")).json();
+		// const data = (await(await window.fetch("./entities.json")).json()).slice(0, 10);
+
+		const template = document.querySelector("template").content.firstElementChild;
+
+		for (let i = 0; i < data.length;) {
+			const fragment = new DocumentFragment();
+
+			innerLoop: for (let j = 0; j < 500; j++) {
+				if (i >= data.length) break innerLoop;
+
+				const [character, names, description, codepoint] = data[i++];
+
+				const clone = template.cloneNode(true);
+
+				clone.querySelector(".character").textContent = character;
+				clone.querySelector(".names").textContent = names.map((name) => `&${name};`).join(" ");
+				const unicode = "U+" + codepoint.toString(16).toUpperCase().padStart(4, "0");
+				clone.querySelector(".unicode").textContent = unicode;
+				clone.querySelector(".description").textContent = description;
+				clone.title = unicode + ": " + description;
+
+				fragment.appendChild(clone);
+			}
+
+			document.querySelector("main ul").appendChild(fragment);
+
+			await new Promise((resolve) => setTimeout(resolve));
+		}
+
+		{ /// service worker, update & PWA
+			const registerServiceWorker = () => navigator.serviceWorker?.register("./service-worker.js", { scope: "./", updateViaCache: "all" });
+			registerServiceWorker();
+
+			navigator.serviceWorker?.addEventListener("message", async ({ data }) => {
+				if (data.message === "updateAvailable") registerServiceWorker();
+			});
+
+			const checkReadyState = async () => {
+				if (document.readyState === "complete" && navigator.onLine) (await navigator.serviceWorker?.ready)?.active.postMessage({ message: "checkForUpdate" });
+			};
+			checkReadyState();
+			document.addEventListener("readystatechange", checkReadyState);
+		}
+	</script>
+</head>
+
+<body>
+	<noscript>
+		Please enable JavaScript to view this site.
+		<hr />
+	</noscript>
+
+	<template>
+		<li class="entity">
+			<div class="character"></div>
+			<div class="names"></div>
+			<div class="showOnHover">
+				<div class="unicode"></div>
+				<div class="description"></div>
+			</div>
+		</li>
+	</template>
+
+	<main>
+		<ul></ul>
+	</main>
+</body>
+
+</html>
